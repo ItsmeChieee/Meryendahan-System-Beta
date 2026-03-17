@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sales Tracker POS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:#0f0f0f;--surface:#1a1a1a;--surface2:#242424;--border:#2e2e2e;
+      --accent:#f5a623;--text:#f0ede6;--muted:#888;
+      --success:#4caf82;--danger:#e84444;--info:#4a9eff;--radius:12px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
+    .screen{display:none;} .screen.active{display:flex;}
+
+    /* ── LOGIN ── */
+    #screen-login{min-height:100vh;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+    .login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:48px 40px;width:100%;max-width:400px;}
+    .login-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:28px;color:var(--accent);margin-bottom:4px;}
+    .login-logo span{color:var(--text);}
+    .login-tagline{font-size:13px;color:var(--muted);margin-bottom:36px;}
+    .login-field{margin-bottom:16px;}
+    .login-field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px;}
+    .login-field input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px 16px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;transition:border-color .2s;}
+    .login-field input:focus{outline:none;border-color:var(--accent);}
+    .login-error{color:var(--danger);font-size:13px;margin-bottom:12px;min-height:18px;}
+    .btn-login{width:100%;padding:14px;background:var(--accent);color:#000;font-family:'Syne',sans-serif;font-weight:800;font-size:15px;border:none;border-radius:10px;cursor:pointer;transition:all .2s;margin-top:4px;}
+    .btn-login:hover{background:#ffb83f;}
+    .btn-login:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;}
+
+    /* ── WELCOME ── */
+    #screen-welcome{min-height:100vh;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;}
+    .welcome-greeting{font-family:'Syne',sans-serif;font-weight:800;font-size:36px;margin-bottom:8px;}
+    .welcome-greeting span{color:var(--accent);}
+    .welcome-date{font-size:15px;color:var(--muted);margin-bottom:12px;}
+    .welcome-sheet-note{font-size:13px;color:var(--muted);margin-bottom:40px;}
+    .welcome-sheet-note strong{color:var(--success);}
+    .welcome-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+    .btn-start-day{padding:18px 48px;background:var(--accent);color:#000;font-family:'Syne',sans-serif;font-weight:800;font-size:18px;border:none;border-radius:14px;cursor:pointer;transition:all .2s;}
+    .btn-start-day:hover{background:#ffb83f;transform:translateY(-2px);}
+    .btn-start-day:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;transform:none;}
+    .btn-secondary-action{padding:12px 28px;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:500;font-size:14px;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s;}
+    .btn-secondary-action:hover{border-color:var(--text);color:var(--text);}
+
+    /* ── MAIN POS ── */
+    #screen-pos{flex-direction:column;min-height:100vh;}
+    header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;flex-shrink:0;}
+    .logo{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--accent);}
+    .logo span{color:var(--text);}
+    .nav-center{display:flex;gap:4px;}
+    .nav-btn{padding:7px 16px;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;border:1px solid transparent;border-radius:8px;cursor:pointer;transition:all .15s;}
+    .nav-btn:hover{color:var(--text);background:var(--surface2);}
+    .nav-btn.active{color:var(--accent);border-color:var(--accent);background:#1e1a10;}
+    .nav-btn.danger:hover{color:var(--danger);border-color:var(--danger);}
+    .header-right{display:flex;align-items:center;gap:12px;}
+    #clock{font-size:12px;color:var(--muted);}
+    #active-sheet-badge{font-size:11px;padding:3px 10px;background:#0a2a15;color:var(--success);border:1px solid #1a5a30;border-radius:20px;}
+
+    .tab-content{display:none;flex:1;}
+    .tab-content.active{display:flex;}
+
+    /* ── TAB: NEW ORDER ── */
+    #tab-order{display:grid;grid-template-columns:1fr 340px;height:calc(100vh - 56px);}
+    .order-panel{overflow-y:auto;padding:20px;border-right:1px solid var(--border);}
+    .panel-title{font-family:'Syne',sans-serif;font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+    .meta-row{margin-bottom:22px;}
+    .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px;}
+    .field input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;transition:border-color .2s;}
+    .field input:focus{outline:none;border-color:var(--accent);}
+    .category-block{margin-bottom:22px;}
+    .cat-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+    .cat-label{font-family:'Syne',sans-serif;font-weight:700;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);}
+    .cat-line{flex:1;height:1px;background:var(--border);}
+    .items-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;}
+
+    /* ── ITEM CARD ── */
+    .item-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;position:relative;transition:border-color .2s;}
+    .item-card.has-value{border-color:var(--accent);background:#1e1a10;}
+    .item-name{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;margin-bottom:8px;text-transform:capitalize;}
+    .price-btns{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;}
+    .price-btn{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 9px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s;}
+    .price-btn:hover{border-color:var(--accent);color:var(--accent);}
+    .custom-input-wrap{display:flex;gap:6px;margin-top:6px;}
+    .custom-input-wrap input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;color:var(--text);font-family:'DM Sans',sans-serif;}
+    .custom-input-wrap input:focus{outline:none;border-color:var(--accent);}
+    .btn-add-custom{background:var(--accent);color:#000;border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+    .price-entries{display:flex;flex-direction:column;gap:3px;margin-top:4px;}
+    .price-entry{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:4px 8px;}
+    .price-entry-label{flex:1;color:var(--text);font-family:'Syne',sans-serif;font-weight:600;font-size:12px;}
+    .price-entry-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0 2px;line-height:1;}
+    .price-entry-remove:hover{color:var(--danger);}
+    .amount-badge{position:absolute;top:8px;right:8px;background:var(--accent);color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:11px;border-radius:5px;padding:2px 7px;display:none;}
+    .item-card.has-value .amount-badge{display:block;}
+
+    /* ── SUMMARY PANEL ── */
+    .summary-panel{display:flex;flex-direction:column;background:var(--surface);overflow:hidden;}
+    .summary-header{padding:16px 18px 10px;border-bottom:1px solid var(--border);}
+    .summary-title{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;}
+    .summary-subtitle{font-size:12px;color:var(--muted);margin-top:2px;}
+    .order-list{flex:1;overflow-y:auto;padding:12px 18px;}
+    .order-empty{text-align:center;padding:32px 16px;color:var(--muted);font-size:13px;}
+    .order-item{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);gap:8px;}
+    .order-item-name{font-size:13px;font-weight:500;text-transform:capitalize;}
+    .order-item-prices{font-size:11px;color:var(--muted);margin-top:2px;}
+    .order-item-total{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--accent);white-space:nowrap;}
+    .totals-block{padding:12px 18px;border-top:1px solid var(--border);background:var(--surface2);}
+    .total-row{display:flex;justify-content:space-between;margin-bottom:4px;}
+    .total-label{font-size:12px;color:var(--muted);}
+    .total-value{font-family:'Syne',sans-serif;font-weight:700;font-size:12px;}
+    .grand-total-row{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+    .grand-total-label{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;}
+    .grand-total-value{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--accent);}
+    .submit-area{padding:12px 18px 16px;background:var(--surface);border-top:1px solid var(--border);}
+    .btn-submit{width:100%;padding:14px;background:var(--accent);color:#000;font-family:'Syne',sans-serif;font-weight:800;font-size:15px;border:none;border-radius:var(--radius);cursor:pointer;transition:all .2s;}
+    .btn-submit:hover{background:#ffb83f;}
+    .btn-submit:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;}
+    .btn-clear{width:100%;padding:9px;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;margin-top:6px;transition:all .2s;}
+    .btn-clear:hover{border-color:var(--danger);color:var(--danger);}
+
+    /* ── TAB: EDIT ORDER ── */
+    #tab-edit{flex-direction:column;padding:24px;overflow-y:auto;}
+    .tab-header{margin-bottom:20px;}
+    .tab-title{font-family:'Syne',sans-serif;font-weight:700;font-size:20px;margin-bottom:4px;}
+    .tab-subtitle{font-size:13px;color:var(--muted);}
+    .btn-fetch-all{padding:10px 24px;background:var(--info);color:#000;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:20px;}
+    .btn-fetch-all:hover{opacity:.85;}
+
+    /* Orders list in edit tab */
+    .edit-orders-list{display:flex;flex-direction:column;gap:12px;}
+    .edit-order-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+    .edit-order-card-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--surface2);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
+    .edit-order-card-header:hover{background:#2a2a2a;}
+    .edit-order-meta{display:flex;gap:12px;align-items:center;}
+    .edit-order-row-num{font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:2px 7px;}
+    .edit-order-time{font-size:13px;color:var(--muted);}
+    .edit-order-customer{font-size:13px;font-weight:500;}
+    .edit-order-total{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--accent);}
+    .edit-order-body{display:none;padding:16px;}
+    .edit-order-body.open{display:block;}
+    .edit-items-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:14px;}
+    .edit-item-field{display:flex;flex-direction:column;gap:4px;}
+    .edit-item-label{font-size:11px;color:var(--muted);text-transform:capitalize;}
+    .edit-item-input{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;}
+    .edit-item-input:focus{outline:none;border-color:var(--accent);}
+    .edit-action-row{display:flex;gap:8px;align-items:center;padding-top:10px;border-top:1px solid var(--border);}
+    .btn-save-edit{padding:8px 20px;background:var(--success);color:#000;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;cursor:pointer;}
+    .btn-save-edit:hover{opacity:.85;}
+    .btn-delete-edit{padding:8px 16px;background:transparent;color:var(--danger);border:1px solid var(--danger);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;}
+    .btn-delete-edit:hover{background:var(--danger);color:#fff;}
+    .edit-empty{text-align:center;padding:48px 24px;color:var(--muted);font-size:14px;}
+
+    /* ── TAB: END OF DAY ── */
+    #tab-eod{flex-direction:column;padding:24px;overflow-y:auto;align-items:center;justify-content:center;min-height:calc(100vh - 56px);}
+    .eod-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px;max-width:480px;width:100%;text-align:center;}
+    .eod-icon{font-size:40px;margin-bottom:16px;}
+    .eod-title{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;margin-bottom:8px;}
+    .eod-desc{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px;}
+    .eod-preview{background:var(--surface2);border-radius:10px;padding:16px;margin-bottom:20px;text-align:left;}
+    .eod-preview-title{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;}
+    .eod-preview-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border);}
+    .eod-preview-row:last-child{border-bottom:none;font-weight:700;color:var(--accent);font-size:15px;margin-top:4px;padding-top:8px;}
+    .btn-preview-eod{width:100%;margin-bottom:12px;padding:12px;font-size:14px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;transition:all .2s;}
+    .btn-preview-eod:hover{border-color:var(--accent);color:var(--accent);}
+    .btn-eod{width:100%;padding:16px;background:#c0392b;color:#fff;font-family:'Syne',sans-serif;font-weight:800;font-size:16px;border:none;border-radius:12px;cursor:pointer;transition:all .2s;}
+    .btn-eod:hover{opacity:.9;}
+    .btn-eod:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;}
+    .eod-done{display:none;}
+    .eod-done.show{display:block;}
+    .eod-main.hide{display:none;}
+
+    /* ── SHARED ── */
+    #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--success);color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;padding:10px 24px;border-radius:40px;z-index:999;transition:transform .35s cubic-bezier(.34,1.56,.64,1);pointer-events:none;white-space:nowrap;}
+    #toast.show{transform:translateX(-50%) translateY(0);}
+    #toast.error{background:var(--danger);color:#fff;}
+    #loading{display:none;position:fixed;inset:0;background:rgba(15,15,15,.85);z-index:998;align-items:center;justify-content:center;flex-direction:column;gap:14px;}
+    #loading.show{display:flex;}
+    .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .loading-text{font-size:13px;color:var(--muted);}
+    ::-webkit-scrollbar{width:4px;}
+    ::-webkit-scrollbar-track{background:transparent;}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+    @media(max-width:768px){
+      #tab-order{grid-template-columns:1fr;}
+      .summary-panel{max-height:50vh;}
+      .nav-btn{padding:6px 10px;font-size:11px;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- SCREEN: LOGIN -->
+<div id="screen-login" class="screen active">
+  <div class="login-card">
+    <div class="login-logo">Sales<span>Tracker</span></div>
+    <div class="login-tagline">Staff access only — please log in</div>
+    <div class="login-field">
+      <label>Username</label>
+      <input type="text" id="login-user" placeholder="Enter username" autocomplete="off" />
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="Enter password" />
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <button class="btn-login" id="btn-login" onclick="handleLogin()">Log In</button>
+  </div>
+</div>
+
+<!-- SCREEN: WELCOME -->
+<div id="screen-welcome" class="screen">
+  <div>
+    <div class="welcome-greeting">Welcome back, <span id="welcome-name"></span>!</div>
+    <div class="welcome-date" id="welcome-date"></div>
+    <div class="welcome-sheet-note" id="sheet-status-note"></div>
+    <div class="welcome-actions">
+      <button class="btn-start-day" id="btn-start-day" onclick="startNewDay()">+ Start a New Day</button>
+      <button class="btn-secondary-action" id="btn-continue-day" onclick="continueTodaySheet()" style="display:none;">Continue Today's Sheet</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: POS -->
+<div id="screen-pos" class="screen">
+  <header>
+    <div class="logo">Sales<span>Tracker</span></div>
+    <div class="nav-center">
+      <button class="nav-btn active" onclick="switchTab('order',this)">New Order</button>
+      <button class="nav-btn" onclick="switchTab('edit',this)">Edit Orders</button>
+      <button class="nav-btn" onclick="switchTab('eod',this)">End of Day</button>
+    </div>
+    <div class="header-right">
+      <span id="active-sheet-badge"></span>
+      <span id="clock"></span>
+      <button class="nav-btn danger" onclick="logout()">Log Out</button>
+    </div>
+  </header>
+
+  <!-- TAB: NEW ORDER -->
+  <div id="tab-order" class="tab-content active">
+    <div class="order-panel">
+      <div class="panel-title">New Transaction</div>
+      <div class="meta-row">
+        <div class="field">
+          <label>Customer Name <span style="color:var(--muted);font-size:10px;">(optional)</span></label>
+          <input type="text" id="customer" placeholder="e.g. Juan" autocomplete="off" />
+        </div>
+      </div>
+      <div class="category-block">
+        <div class="cat-header"><span class="cat-label">Food</span><div class="cat-line"></div></div>
+        <div class="items-grid" id="food-grid"></div>
+      </div>
+      <div class="category-block">
+        <div class="cat-header"><span class="cat-label">Drinks</span><div class="cat-line"></div></div>
+        <div class="items-grid" id="drinks-grid"></div>
+      </div>
+    </div>
+    <div class="summary-panel">
+      <div class="summary-header">
+        <div class="summary-title">Order Summary</div>
+        <div class="summary-subtitle" id="summary-date"></div>
+      </div>
+      <div class="order-list" id="order-list"><div class="order-empty">No items added yet.</div></div>
+      <div class="totals-block">
+        <div class="total-row"><span class="total-label">Items</span><span class="total-value" id="item-count">0</span></div>
+        <div class="grand-total-row">
+          <span class="grand-total-label">TOTAL</span>
+          <span class="grand-total-value" id="grand-total">₱0</span>
+        </div>
+      </div>
+      <div class="submit-area">
+        <button class="btn-submit" id="btn-submit" onclick="submitOrder()" disabled>Submit Order</button>
+        <button class="btn-clear" onclick="clearAll()">Clear All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: EDIT ORDERS -->
+  <div id="tab-edit" class="tab-content">
+    <div class="tab-header">
+      <div class="tab-title">Today's Orders</div>
+      <div class="tab-subtitle">Click any order to expand and edit it. Changes save directly to Google Sheets.</div>
+    </div>
+    <button class="btn-fetch-all" onclick="loadAllOrders()">↻ Load / Refresh Orders</button>
+    <div id="edit-orders-container"><div class="edit-empty">Click "Load / Refresh Orders" to see today's transactions.</div></div>
+  </div>
+
+  <!-- TAB: END OF DAY -->
+  <div id="tab-eod" class="tab-content">
+    <div class="eod-card">
+      <div class="eod-main" id="eod-main">
+        <div class="eod-icon">📊</div>
+        <div class="eod-title">End of Day</div>
+        <div class="eod-desc">Preview today's item totals, then finalize. A summary row will be added to the bottom of today's sheet.</div>
+        <div class="eod-preview" id="eod-preview" style="display:none;">
+          <div class="eod-preview-title">Today's totals</div>
+          <div id="eod-preview-rows"></div>
+        </div>
+        <button class="btn-preview-eod" onclick="previewEOD()">Preview Today's Totals</button>
+        <button class="btn-eod" id="btn-eod" onclick="submitEOD()" disabled>Finalize &amp; Add Summary to Sheet</button>
+      </div>
+      <div class="eod-done" id="eod-done">
+        <div class="eod-icon">✅</div>
+        <div class="eod-title">Day Finalized!</div>
+        <div class="eod-desc">The summary row has been added to today's sheet. Great work today!</div>
+        <button class="btn-secondary-action" onclick="logout()" style="margin-top:16px;">Log Out</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Working…</div></div>
+
+<script>
+  const GAS_URL = "AKfycbwJoXJ2ULNnCTp7CNC-MZRL4c51i9Fee-6roihd1rFjanR8MMoH0FX028JwHB1FHDqTow";
+
+  // ── PER-ITEM PRICE CONFIG ─────────────────────────────────
+  const ITEM_CONFIG = [
+    { name:"cheese sticks",  category:"food",   prices:[5,10,15,20] },
+    { name:"chicken ball",   category:"food",   prices:[5,10,15,20] },
+    { name:"fish ball",      category:"food",   prices:[5,10,15,20] },
+    { name:"fries",          category:"food",   prices:[10,20,30]   },
+    { name:"kikiam",         category:"food",   prices:[5,10,15,20] },
+    { name:"paa",            category:"food",   prices:[7,20]       },
+    { name:"quail egg",      category:"food",   prices:[5,10,15,20] },
+    { name:"tokwa",          category:"food",   prices:[5,10,15,20] },
+    { name:"squid ball",     category:"food",   prices:[5,10,15,20] },
+    { name:"mais con yelo",  category:"drinks", prices:[15,20]      },
+    { name:"choco kisses",   category:"drinks", prices:[15,20]      },
+    { name:"double dutch",   category:"drinks", prices:[15,20]      },
+    { name:"melon",          category:"drinks", prices:[15,20]      },
+    { name:"ube",            category:"drinks", prices:[15,20]      },
+    { name:"buko pandan",    category:"drinks", prices:[15,20]      },
+    { name:"mango",          category:"drinks", prices:[15,20]      },
+  ];
+
+  const ALL_ITEMS   = ITEM_CONFIG.map(i => i.name);
+  const FOOD_ITEMS  = ITEM_CONFIG.filter(i => i.category==='food').map(i => i.name);
+  const DRINK_ITEMS = ITEM_CONFIG.filter(i => i.category==='drinks').map(i => i.name);
+
+  const orderState = {};
+  let activeSheetName = "";
+  let loggedInUser    = "";
+
+  // ── LOGIN ─────────────────────────────────────────────────
+  async function handleLogin() {
+    const user  = document.getElementById('login-user').value.trim();
+    const pass  = document.getElementById('login-pass').value;
+    const errEl = document.getElementById('login-error');
+    const btn   = document.getElementById('btn-login');
+    if (!user || !pass) { errEl.textContent='Please enter username and password.'; return; }
+    btn.disabled=true; btn.textContent='Checking…';
+    try {
+      const res = await callGAS({action:'login', username:user, password:pass});
+      if (res.success) {
+        loggedInUser = res.displayName || user;
+        await showWelcome();
+      } else {
+        errEl.textContent='Incorrect username or password.';
+        btn.disabled=false; btn.textContent='Log In';
+      }
+    } catch(e) {
+      errEl.textContent='Connection error. Check your GAS URL.';
+      btn.disabled=false; btn.textContent='Log In';
+    }
+  }
+  ['login-user','login-pass'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => { if(e.key==='Enter') handleLogin(); });
+  });
+
+  // ── WELCOME ───────────────────────────────────────────────
+  async function showWelcome() {
+    showScreen('welcome');
+    document.getElementById('welcome-name').textContent = loggedInUser;
+    document.getElementById('welcome-date').textContent =
+      new Date().toLocaleDateString('en-PH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    showLoading(true,"Checking today's sheet…");
+    try {
+      const res = await callGAS({action:'checkTodaySheet'});
+      showLoading(false);
+      if (res.exists) {
+        activeSheetName = res.sheetName;
+        document.getElementById('sheet-status-note').innerHTML =
+          `Today's sheet <strong>${res.sheetName}</strong> already exists.`;
+        document.getElementById('btn-continue-day').style.display='inline-block';
+        document.getElementById('btn-start-day').textContent='Create New (replace)';
+      } else {
+        document.getElementById('sheet-status-note').textContent='No sheet found for today yet. Click below to begin.';
+        document.getElementById('btn-continue-day').style.display='none';
+        document.getElementById('btn-start-day').textContent='+ Start a New Day';
+      }
+    } catch(e) { showLoading(false); }
+  }
+
+  async function startNewDay() {
+    showLoading(true,"Creating today's sheet…");
+    try {
+      const res = await callGAS({action:'startNewDay'});
+      showLoading(false);
+      if (res.success) { activeSheetName=res.sheetName; showToast(`Sheet "${res.sheetName}" ready!`); launchPOS(); }
+      else showToast('Error creating sheet.',true);
+    } catch(e) { showLoading(false); showToast('Connection error.',true); }
+  }
+
+  function continueTodaySheet() { launchPOS(); }
+
+  function launchPOS() {
+    showScreen('pos');
+    document.getElementById('active-sheet-badge').textContent = activeSheetName;
+    document.getElementById('summary-date').textContent =
+      new Date().toLocaleDateString('en-PH',{weekday:'short',month:'short',day:'numeric'});
+    buildGrids(); updateSummary(); updateClock();
+    document.getElementById('eod-main').classList.remove('hide');
+    document.getElementById('eod-done').classList.remove('show');
+    document.getElementById('btn-eod').disabled=true;
+    document.getElementById('eod-preview').style.display='none';
+  }
+
+  // ── ITEM CARD BUILDER ─────────────────────────────────────
+  function buildItemCard(itemName) {
+    const key    = itemName.replace(/\s+/g,'_');
+    const config = ITEM_CONFIG.find(i => i.name === itemName);
+    orderState[key] = [];
+
+    const card = document.createElement('div');
+    card.className='item-card'; card.id=`card-${key}`;
+
+    const badge = document.createElement('div');
+    badge.className='amount-badge'; badge.id=`badge-${key}`;
+
+    const nameEl = document.createElement('div');
+    nameEl.className='item-name'; nameEl.textContent=itemName;
+
+    const btnRow = document.createElement('div');
+    btnRow.className='price-btns';
+
+    // Use this item's specific prices
+    config.prices.forEach(price => {
+      const btn=document.createElement('button');
+      btn.className='price-btn'; btn.textContent=`₱${price}`;
+      btn.onclick=()=>addPriceEntry(key,price);
+      btnRow.appendChild(btn);
+    });
+
+    const customWrap=document.createElement('div');
+    customWrap.className='custom-input-wrap';
+    const customInput=document.createElement('input');
+    customInput.type='number'; customInput.min='1'; customInput.placeholder='Custom ₱';
+    customInput.id=`custom-${key}`;
+    const addBtn=document.createElement('button');
+    addBtn.className='btn-add-custom'; addBtn.textContent='+ Add';
+    addBtn.onclick=()=>{
+      const val=parseFloat(customInput.value);
+      if(!isNaN(val)&&val>0){addPriceEntry(key,val);customInput.value='';}
+    };
+    customInput.addEventListener('keydown',e=>{if(e.key==='Enter')addBtn.click();});
+    customWrap.appendChild(customInput); customWrap.appendChild(addBtn);
+
+    const entriesEl=document.createElement('div');
+    entriesEl.className='price-entries'; entriesEl.id=`entries-${key}`;
+
+    card.appendChild(badge); card.appendChild(nameEl);
+    card.appendChild(btnRow); card.appendChild(customWrap); card.appendChild(entriesEl);
+    return card;
+  }
+
+  function addPriceEntry(key,price) { orderState[key].push({price}); renderEntries(key); updateSummary(); }
+
+  function removePriceEntry(key,index) { orderState[key].splice(index,1); renderEntries(key); updateSummary(); }
+
+  function renderEntries(key) {
+    const entries=orderState[key];
+    const el=document.getElementById(`entries-${key}`);
+    const card=document.getElementById(`card-${key}`);
+    const badge=document.getElementById(`badge-${key}`);
+    el.innerHTML='';
+    if(entries.length===0){card.classList.remove('has-value');return;}
+    card.classList.add('has-value');
+    const total=entries.reduce((s,e)=>s+e.price,0);
+    badge.textContent=`₱${total}`;
+    const grouped={};
+    entries.forEach((e,i)=>{if(!grouped[e.price])grouped[e.price]=[];grouped[e.price].push(i);});
+    Object.entries(grouped).forEach(([price,indices])=>{
+      const row=document.createElement('div');
+      row.className='price-entry';
+      row.innerHTML=`<span class="price-entry-label">${indices.length}× ₱${price}</span>
+        <button class="price-entry-remove" onclick="removePriceEntry('${key}',${indices[indices.length-1]})">✕</button>`;
+      el.appendChild(row);
+    });
+  }
+
+  // ── ORDER SUMMARY ─────────────────────────────────────────
+  function updateSummary() {
+    const list=document.getElementById('order-list');
+    let total=0,count=0;
+    const rows=[];
+    ALL_ITEMS.forEach(itemName=>{
+      const key=itemName.replace(/\s+/g,'_');
+      const entries=orderState[key]||[];
+      if(entries.length>0){
+        const itemTotal=entries.reduce((s,e)=>s+e.price,0);
+        total+=itemTotal; count++;
+        const bd=Object.entries(entries.reduce((acc,e)=>{acc[e.price]=(acc[e.price]||0)+1;return acc;},{}))
+          .map(([p,q])=>`${q}×₱${p}`).join(', ');
+        rows.push({name:itemName,breakdown:bd,total:itemTotal});
+      }
+    });
+    document.getElementById('grand-total').textContent=`₱${total}`;
+    document.getElementById('item-count').textContent=count;
+    document.getElementById('btn-submit').disabled=total===0;
+    if(rows.length===0){list.innerHTML='<div class="order-empty">No items added yet.</div>';return;}
+    list.innerHTML='';
+    rows.forEach(r=>{
+      const row=document.createElement('div');
+      row.className='order-item';
+      row.innerHTML=`<div><div class="order-item-name">${r.name}</div><div class="order-item-prices">${r.breakdown}</div></div>
+        <div class="order-item-total">₱${r.total}</div>`;
+      list.appendChild(row);
+    });
+  }
+
+  // ── SUBMIT ORDER ──────────────────────────────────────────
+  async function submitOrder() {
+    const customer=document.getElementById('customer').value.trim();
+    const itemCells=ALL_ITEMS.map(name=>{
+      const key=name.replace(/\s+/g,'_');
+      const entries=orderState[key]||[];
+      if(entries.length===0) return 0;
+      const grouped=entries.reduce((acc,e)=>{acc[e.price]=(acc[e.price]||0)+1;return acc;},{});
+      // Store as "2x10,1x5" — plain numbers, no ₱ symbol to avoid parse issues
+      return Object.entries(grouped).map(([p,q])=>`${q}x${p}`).join(',');
+    });
+    const total=ALL_ITEMS.reduce((s,name)=>{
+      const key=name.replace(/\s+/g,'_');
+      return s+(orderState[key]||[]).reduce((ss,e)=>ss+e.price,0);
+    },0);
+    showLoading(true,'Saving to Google Sheets…');
+    try {
+      const res=await callGAS({
+        action:'addOrder', sheetName:activeSheetName,
+        timestamp:new Date().toLocaleString('en-PH',{timeZone:'Asia/Manila'}),
+        customer:customer||'—', items:itemCells, total
+      });
+      showLoading(false);
+      if(res.success){showToast('✓ Order saved!');clearAll();}
+      else throw new Error(res.error);
+    } catch(e){showLoading(false);showToast('Error saving order.',true);}
+  }
+
+  // ── EDIT ORDERS: LOAD ALL ─────────────────────────────────
+  async function loadAllOrders() {
+    showLoading(true,'Loading today\'s orders…');
+    try {
+      const res=await callGAS({action:'getAllOrders',sheetName:activeSheetName});
+      showLoading(false);
+      renderAllOrders(res.orders||[]);
+    } catch(e){showLoading(false);showToast('Error loading orders.',true);}
+  }
+
+  function renderAllOrders(orders) {
+    const container=document.getElementById('edit-orders-container');
+    if(orders.length===0){
+      container.innerHTML='<div class="edit-empty">No orders found for today yet.</div>';
+      return;
+    }
+    container.innerHTML='';
+    const list=document.createElement('div');
+    list.className='edit-orders-list';
+
+    orders.forEach(order => {
+      const card=document.createElement('div');
+      card.className='edit-order-card';
+
+      // Build item summary for the collapsed header (only non-zero items)
+      const itemSummary = ALL_ITEMS
+        .map((name,i)=>({name,val:order.items[i]}))
+        .filter(x=>x.val&&x.val!=='0'&&x.val!==0)
+        .map(x=>`${x.name}: ${x.val}`)
+        .join(' · ') || 'No items';
+
+      card.innerHTML=`
+        <div class="edit-order-card-header" onclick="toggleEditCard(this)">
+          <div class="edit-order-meta">
+            <span class="edit-order-row-num">Row ${order.rowNum}</span>
+            <span class="edit-order-time">${order.timestamp}</span>
+            <span class="edit-order-customer">${order.customer!=='—'?order.customer:''}</span>
+          </div>
+          <span class="edit-order-total">₱${order.total}</span>
+        </div>
+        <div class="edit-order-body" id="body-${order.rowNum}">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">${itemSummary}</div>
+          <div class="edit-items-grid" id="fields-${order.rowNum}"></div>
+          <div class="edit-action-row">
+            <button class="btn-save-edit" onclick="saveEditedOrder(${order.rowNum})">Save Changes</button>
+            <button class="btn-delete-edit" onclick="deleteOrder(${order.rowNum})">Delete Order</button>
+          </div>
+        </div>`;
+
+      // Build editable fields for each item
+      list.appendChild(card);
+
+      // Populate item fields after appending (so DOM exists)
+      setTimeout(()=>{
+        const fieldsEl=document.getElementById(`fields-${order.rowNum}`);
+        if(!fieldsEl) return;
+        ALL_ITEMS.forEach((name,i)=>{
+          const wrap=document.createElement('div');
+          wrap.className='edit-item-field';
+          wrap.innerHTML=`<label class="edit-item-label">${name}</label>
+            <input class="edit-item-input" type="text" 
+              id="ef-${order.rowNum}-${i}" 
+              value="${order.items[i]||''}" 
+              placeholder="0" />`;
+          fieldsEl.appendChild(wrap);
+        });
+      },0);
+    });
+
+    container.appendChild(list);
+  }
+
+  function toggleEditCard(header) {
+    const body=header.nextElementSibling;
+    body.classList.toggle('open');
+  }
+
+  async function saveEditedOrder(rowNum) {
+    const newItems=ALL_ITEMS.map((_,i)=>{
+      const inp=document.getElementById(`ef-${rowNum}-${i}`);
+      return inp?inp.value.trim():'0';
+    });
+    // Recalculate total from edited fields
+    const newTotal=newItems.reduce((s,v)=>s+parseAmountClient(v),0);
+    showLoading(true,'Saving changes…');
+    try {
+      const res=await callGAS({action:'updateOrder',sheetName:activeSheetName,rowNum,items:newItems,total:newTotal});
+      showLoading(false);
+      if(res.success){showToast('✓ Order updated!');loadAllOrders();}
+      else throw new Error(res.error);
+    } catch(e){showLoading(false);showToast('Error saving.',true);}
+  }
+
+  async function deleteOrder(rowNum) {
+    if(!confirm(`Delete Row ${rowNum}? This cannot be undone.`)) return;
+    showLoading(true,'Deleting order…');
+    try {
+      const res=await callGAS({action:'deleteOrder',sheetName:activeSheetName,rowNum});
+      showLoading(false);
+      if(res.success){showToast('Order deleted.');loadAllOrders();}
+      else throw new Error(res.error);
+    } catch(e){showLoading(false);showToast('Error deleting.',true);}
+  }
+
+  // Client-side amount parser (mirrors server)
+  function parseAmountClient(val) {
+    if(!val||val==='0'||val===0) return 0;
+    const str=String(val).trim();
+    let total=0;
+    str.split(',').forEach(part=>{
+      part=part.trim();
+      // Matches "2x10", "2x₱10", "2X10", etc.
+      const m=part.match(/^(\d+)[xX×]\s*[₱]?\s*(\d+(?:\.\d+)?)$/);
+      if(m){ total+=parseInt(m[1])*parseFloat(m[2]); }
+      else {
+        const n=parseFloat(part.replace(/[₱\s]/g,''));
+        if(!isNaN(n)) total+=n;
+      }
+    });
+    return total;
+  }
+
+  // ── END OF DAY ────────────────────────────────────────────
+  async function previewEOD() {
+    showLoading(true,'Calculating totals…');
+    try {
+      const res=await callGAS({action:'previewEOD',sheetName:activeSheetName});
+      showLoading(false);
+      if(!res.success){showToast('Error loading data.',true);return;}
+      const previewEl=document.getElementById('eod-preview');
+      const rowsEl=document.getElementById('eod-preview-rows');
+      previewEl.style.display='block'; rowsEl.innerHTML='';
+      res.totals.forEach(t=>{
+        if(t.amount>0){
+          const row=document.createElement('div');
+          row.className='eod-preview-row';
+          row.innerHTML=`<span style="text-transform:capitalize">${t.name}</span><span>₱${t.amount}</span>`;
+          rowsEl.appendChild(row);
+        }
+      });
+      const gr=document.createElement('div');
+      gr.className='eod-preview-row';
+      gr.innerHTML=`<span>Grand Total</span><span>₱${res.grandTotal}</span>`;
+      rowsEl.appendChild(gr);
+      document.getElementById('btn-eod').disabled=false;
+    } catch(e){showLoading(false);showToast('Error.',true);}
+  }
+
+  async function submitEOD() {
+    showLoading(true,'Adding summary to sheet…');
+    try {
+      const res=await callGAS({action:'finalizeEOD',sheetName:activeSheetName});
+      showLoading(false);
+      if(res.success){
+        document.getElementById('eod-main').classList.add('hide');
+        document.getElementById('eod-done').classList.add('show');
+        showToast('✓ End of day recorded!');
+      } else throw new Error(res.error);
+    } catch(e){showLoading(false);showToast('Error finalizing.',true);}
+  }
+
+  // ── UTILITIES ─────────────────────────────────────────────
+  function clearAll() {
+    ALL_ITEMS.forEach(name=>{const key=name.replace(/\s+/g,'_');orderState[key]=[];renderEntries(key);});
+    document.getElementById('customer').value='';
+    updateSummary();
+  }
+
+  function buildGrids() {
+    document.getElementById('food-grid').innerHTML='';
+    document.getElementById('drinks-grid').innerHTML='';
+    FOOD_ITEMS.forEach(item=>document.getElementById('food-grid').appendChild(buildItemCard(item)));
+    DRINK_ITEMS.forEach(item=>document.getElementById('drinks-grid').appendChild(buildItemCard(item)));
+  }
+
+  function switchTab(tab,btn) {
+    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById(`screen-${name}`).classList.add('active');
+  }
+
+  function logout() {
+    loggedInUser=''; activeSheetName='';
+    document.getElementById('login-user').value='';
+    document.getElementById('login-pass').value='';
+    document.getElementById('login-error').textContent='';
+    document.getElementById('btn-login').disabled=false;
+    document.getElementById('btn-login').textContent='Log In';
+    showScreen('login');
+  }
+
+  function updateClock() {
+    const el=document.getElementById('clock');
+    if(el) el.textContent=new Date().toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }
+  setInterval(updateClock,1000);
+
+  function showToast(msg,isError=false) {
+    const t=document.getElementById('toast');
+    t.textContent=msg; t.classList.toggle('error',isError);
+    t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000);
+  }
+
+  function showLoading(state,text='Working…') {
+    document.getElementById('loading-text').textContent=text;
+    document.getElementById('loading').classList.toggle('show',state);
+  }
+
+  async function callGAS(payload) {
+    const res=await fetch(GAS_URL,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify(payload)
+    });
+    return JSON.parse(await res.text());
+  }
+</script>
+</body>
+</html>
