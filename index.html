@@ -315,7 +315,7 @@
 <div id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Working…</div></div>
 
 <script>
-  const GAS_URL = "AKfycbwJoXJ2ULNnCTp7CNC-MZRL4c51i9Fee-6roihd1rFjanR8MMoH0FX028JwHB1FHDqTow";
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbxrdAJwDA1ENJ1NGFW6lMaEJvqLTG9ax1AATtDmobrP/dev";
 
   // ── PER-ITEM PRICE CONFIG ─────────────────────────────────
   const ITEM_CONFIG = [
@@ -363,7 +363,7 @@
         btn.disabled=false; btn.textContent='Log In';
       }
     } catch(e) {
-      errEl.textContent='Connection error. Check your GAS URL.';
+      errEl.textContent='Connection error. Check your GAS .';
       btn.disabled=false; btn.textContent='Log In';
     }
   }
@@ -765,7 +765,7 @@
   }
 
   async function callGAS(payload) {
-    const res=await fetch(GAS_URL,{
+    const res=await fetch(GAS_,{
       method:'POST',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
       body:JSON.stringify(payload)
