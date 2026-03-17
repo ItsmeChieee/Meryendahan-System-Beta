@@ -363,7 +363,7 @@
         btn.disabled=false; btn.textContent='Log In';
       }
     } catch(e) {
-      errEl.textContent='Connection error. Check your GAS .';
+      errEl.textContent='Connection error. Check your GAS URL.';
       btn.disabled=false; btn.textContent='Log In';
     }
   }
@@ -765,7 +765,7 @@
   }
 
   async function callGAS(payload) {
-    const res=await fetch(GAS_,{
+    const res=await fetch(GAS_URL,{
       method:'POST',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
       body:JSON.stringify(payload)
